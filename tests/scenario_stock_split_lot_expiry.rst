@@ -65,6 +65,15 @@ Create customer::
     >>> customer = Party(name='Customer')
     >>> customer.save()
 
+Get stock locations and set Allow Expired to Storage Location::
+
+    >>> Location = Model.get('stock.location')
+    >>> customer_loc, = Location.find([('code', '=', 'CUS')])
+    >>> output_loc, = Location.find([('code', '=', 'OUT')])
+    >>> storage_loc, = Location.find([('code', '=', 'STO')])
+    >>> storage_loc.allow_expired = True
+    >>> storage_loc.save()
+
 Create products::
 
     >>> ProductUom = Model.get('product.uom')
@@ -78,18 +87,13 @@ Create products::
     >>> template.type = 'goods'
     >>> template.list_price = Decimal('20')
     >>> template.cost_price = Decimal('8')
+    >>> locations = Location.find()
+    >>> for loc in locations:
+    ...     template.lot_required.append(loc)
     >>> template.save()
     >>> product.template = template
     >>> product.save()
 
-Get stock locations and set Allow Expired to Storage Location::
-
-    >>> Location = Model.get('stock.location')
-    >>> customer_loc, = Location.find([('code', '=', 'CUS')])
-    >>> output_loc, = Location.find([('code', '=', 'OUT')])
-    >>> storage_loc, = Location.find([('code', '=', 'STO')])
-    >>> storage_loc.allow_expired = True
-    >>> storage_loc.save()
 
 Create four lots with different expiry dates (one is expired)::
 
@@ -145,7 +149,7 @@ Create Shipment Out of 15 units of Product and set to waiting::
     >>> move.to_location = customer_loc
     >>> move.company = company
     >>> move.unit_price = Decimal('1')
-    >>> move.currency = currency
+    >>> move.currency = currency    
     >>> shipment_out.save()
     >>> ShipmentOut.wait([shipment_out.id], config.context)
     >>> shipment_out.reload()
@@ -156,9 +160,7 @@ Execute the Split Moves by Expiry Date button and check there is 3 Inventory
 Moves assigned with lot and 4 units and another Inventory Move of 3 units
 in Draft state::
 
-    >>> ShipmentOut.split_moves_by_expiry_date([shipment_out.id],
-    ...     config.context)
-    >>> shipment_out.reload()
+    >>> ok = ShipmentOut.assign_try([shipment_out.id], config.context)
     >>> assigned_moves = [m for m in shipment_out.inventory_moves
     ...     if m.state == 'assigned']
     >>> len(assigned_moves)
@@ -171,8 +173,9 @@ in Draft state::
     1
     >>> draft_moves[0].quantity == 3
     True
-    >>> ShipmentOut.assign_try([shipment_out.id], config.context)
-    False
+    
+    #>>> ShipmentOut.assign_try([shipment_out.id], config.context)
+    #False
 
 Cancel Shipment and set to Draft
 
@@ -203,8 +206,8 @@ Add a new shipment line of 11 units of product and set shipment to waiting::
 Execute the Split Moves by Expiry Date button and check all inventory moves are
 assigned and sum the 11 units of shipment line::
 
-    >>> ShipmentOut.split_moves_by_expiry_date([shipment_out.id],
-    ...     config.context)
+    >>> ShipmentOut.assign_try([shipment_out.id],config.context)
+    True
     >>> shipment_out.reload()
     >>> len(shipment_out.inventory_moves)
     3
@@ -215,14 +218,10 @@ assigned and sum the 11 units of shipment line::
 
 Assign, pack and set done the shipment::
 
-    >>> ShipmentOut.assign_try([shipment_out.id], config.context)
+    >>> shipment_out.state == 'assigned'
     True
-    >>> ShipmentOut.pack([shipment_out.id], config.context)
-    >>> ShipmentOut.done([shipment_out.id], config.context)
-    >>> shipment_out.reload()
-    >>> shipment_out.state == 'done'
-    True
-
+    
+    
 Check that lots are used priorizing what have the nearest Expiry Date, without
 using the expired lots::
 
