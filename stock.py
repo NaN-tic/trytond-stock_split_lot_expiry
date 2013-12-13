@@ -56,6 +56,7 @@ class Move:
         search_context = {
             'locations': [self.from_location.id],
             'stock_date_end': date_end,
+            'stock_assign': True,
             'forecast': False,
             }
         lots_and_qty = []
@@ -85,35 +86,35 @@ class Move:
                         remainder, self.uom),
                     'state': state,
                     })
-            return [self]
+            moves = [self]
+        else:
+            self.write([self], {
+                    'lot': current_lot.id,
+                    'quantity': Uom.compute_qty(self.product.default_uom,
+                        current_lot_qty, self.uom),
+                    })
+            remainder -= current_lot_qty
 
-        self.write([self], {
-                'lot': current_lot.id,
-                'quantity': Uom.compute_qty(self.product.default_uom,
-                    current_lot_qty, self.uom),
-                })
-        remainder -= current_lot_qty
+            moves = [self]
+            while remainder > 0.0 and lots_and_qty:
+                current_lot, current_lot_qty = lots_and_qty.pop(0)
+                quantity = min(current_lot_qty, remainder)
+                moves.extend(self.copy([self], {
+                            'lot': current_lot.id,
+                            'quantity': Uom.compute_qty(
+                                self.product.default_uom, quantity, self.uom),
+                            }))
+                remainder -= quantity
+            if remainder > 0.0:
+                moves.extend(self.copy([self], {
+                            'lot': None,
+                            'quantity': Uom.compute_qty(
+                                self.product.default_uom, remainder, self.uom),
+                            }))
 
-        moves = [self]
-        while remainder > 0.0 and lots_and_qty:
-            current_lot, current_lot_qty = lots_and_qty.pop(0)
-            quantity = min(current_lot_qty, remainder)
-            moves.extend(self.copy([self], {
-                        'lot': current_lot.id,
-                        'quantity': Uom.compute_qty(self.product.default_uom,
-                            quantity, self.uom),
-                        }))
-            remainder -= quantity
-        if remainder > 0.0:
-            moves.extend(self.copy([self], {
-                        'lot': None,
-                        'quantity': Uom.compute_qty(self.product.default_uom,
-                            remainder, self.uom),
-                        }))
-
-        self.write(moves, {
-                'state': state,
-                })
+            self.write(moves, {
+                    'state': state,
+                    })
         self.assign_try(moves, grouping=('product', 'lot'))
         return moves
 
@@ -124,6 +125,7 @@ class ShipmentOut:
     @classmethod
     @ModelView.button
     def assign_try(cls, shipments):
+        assigned = True
         for shipment in shipments:
             for move in shipment.inventory_moves:
                 lot_required = ('customer'
@@ -133,5 +135,7 @@ class ShipmentOut:
                 if move.allow_split_lot_expiry and lot_required:
                     splitted_moves = move._split_by_lot_expiry()
                     if not all(bool(m.lot) for m in splitted_moves):
-                        return False
+                        assigned = False
+        if not assigned:
+            return False
         return super(ShipmentOut, cls).assign_try(shipments)
