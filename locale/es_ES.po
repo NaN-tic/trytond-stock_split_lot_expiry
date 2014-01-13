@@ -1,0 +1,20 @@
+# 
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "error:stock.move:"
+msgid ""
+"You are trying to split the Stock Move \"%s\" by Expiry Dates but it is in a"
+" invalid state (Assigned, Done or Cancelled) or it already has a Lot."
+msgstr ""
+"Está intentando dividir el movimento de estoc \"%s\" por la caducidad de los"
+" lotes, pero no se puede hacer si su estado es Asignado, Realizado o "
+"Cancelado, o si ya tiene un lote asignado."
+
+msgctxt "field:stock.move,allow_split_lot_expiry:"
+msgid "Allow Split"
+msgstr "Se puede dividir"
+
+msgctxt "view:stock.move:"
+msgid "Split by Lot Expiry"
+msgstr "Dividir por caducidad de lotes"
