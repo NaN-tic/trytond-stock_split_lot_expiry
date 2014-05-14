@@ -149,7 +149,7 @@ Create Shipment Out of 15 units of Product and set to waiting::
     >>> move.to_location = customer_loc
     >>> move.company = company
     >>> move.unit_price = Decimal('1')
-    >>> move.currency = currency    
+    >>> move.currency = currency
     >>> shipment_out.save()
     >>> ShipmentOut.wait([shipment_out.id], config.context)
     >>> shipment_out.reload()
@@ -161,23 +161,18 @@ Moves assigned with lot and 4 units and another Inventory Move of 3 units
 in Draft state::
 
     >>> ok = ShipmentOut.assign_try([shipment_out.id], config.context)
-    >>> assigned_moves = [m for m in shipment_out.inventory_moves
-    ...     if m.state == 'assigned']
-    >>> len(assigned_moves)
+    >>> lot_moves = [m for m in shipment_out.inventory_moves
+    ...     if m.lot]
+    >>> len(lot_moves)
     3
-    >>> all(bool(m.lot) and m.quantity == 4 for m in assigned_moves)
+    >>> all(m.quantity == 4 for m in lot_moves)
     True
-    >>> draft_moves = [m for m in shipment_out.inventory_moves
-    ...     if m.state == 'draft']
-    >>> len(draft_moves)
-    1
-    >>> draft_moves[0].quantity == 3
+    >>> without_lot, = [m for m in shipment_out.inventory_moves
+    ...     if not m.lot]
+    >>> without_lot.quantity == 3
     True
-    
-    #>>> ShipmentOut.assign_try([shipment_out.id], config.context)
-    #False
 
-Cancel Shipment and set to Draft
+Cancel Shipment and set to Draft::
 
     >>> ShipmentOut.cancel([shipment_out.id], config.context)
     >>> ShipmentOut.draft([shipment_out.id], config.context)
@@ -218,10 +213,13 @@ assigned and sum the 11 units of shipment line::
 
 Assign, pack and set done the shipment::
 
-    >>> shipment_out.state == 'assigned'
-    True
-    
-    
+    >>> ShipmentOut.pack([shipment_out.id],config.context)
+    >>> ShipmentOut.done([shipment_out.id],config.context)
+    >>> shipment_out.reload()
+    >>> shipment_out.state
+    u'done'
+
+
 Check that lots are used priorizing what have the nearest Expiry Date, without
 using the expired lots::
 
