@@ -21,9 +21,9 @@ class Move:
     def __setup__(cls):
         super(Move, cls).__setup__()
         cls._error_messages.update({
-            'invalid_split_by_lot_expiry': 'You are trying to split the '
+            'invalid_split_by_lot_expiry': ('You are trying to split the '
                 'Stock Move "%s" by Expiry Dates but it is in a invalid state '
-                '(Assigned, Done or Cancelled) or it already has a Lot.',
+                '(Assigned, Done or Cancelled) or it already has a Lot.'),
             })
         cls._buttons.update({
                 'split_by_lot_expiry': {
