@@ -211,14 +211,6 @@ assigned and sum the 11 units of shipment line::
     >>> sum(m.quantity for m in shipment_out.inventory_moves)
     11.0
 
-Assign, pack and set done the shipment::
-
-    >>> ShipmentOut.pack([shipment_out.id],config.context)
-    >>> ShipmentOut.done([shipment_out.id],config.context)
-    >>> shipment_out.reload()
-    >>> shipment_out.state
-    u'done'
-
 
 Check that lots are used priorizing what have the nearest Expiry Date, without
 using the expired lots::
