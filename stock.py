@@ -65,7 +65,11 @@ class Move:
                     ('product', '=', self.product.id),
                     ('expiry_date', '>', date_end),
                     ('quantity', '>', 0.0),
-                    ], order=[('expiry_date', 'ASC')])
+                    ],
+                order=[
+                    ('expiry_date', 'ASC'),
+                    ('number', 'ASC'),
+                    ])
             for lot in lots:
                 lots_and_qty.append((lot, lot.quantity))
 
