@@ -125,7 +125,6 @@ class Move:
             self.write(moves, {
                     'state': state,
                     })
-        self.assign_try(moves, grouping=('product', 'lot'))
         return moves
 
 
@@ -135,7 +134,6 @@ class ShipmentOut:
     @classmethod
     @ModelView.button
     def assign_try(cls, shipments):
-        assigned = True
         for shipment in shipments:
             for move in shipment.inventory_moves:
                 lot_required = ('customer'
