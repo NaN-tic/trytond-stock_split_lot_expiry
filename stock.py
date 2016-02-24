@@ -45,6 +45,7 @@ class Move:
 
     def _split_by_lot_expiry(self):
         pool = Pool()
+        Date = pool.get('ir.date')
         Lot = pool.get('stock.lot')
         Uom = pool.get('product.uom')
 
@@ -52,7 +53,12 @@ class Move:
             self.raise_user_error('invalid_split_by_lot_expiry',
                 (self.rec_name,))
 
-        date_end = self.effective_date or self.planned_date or date.today()
+        if self.effective_date:
+            date_end = self.effective_date
+        elif self.planned_date and self.planned_date >= Date.today():
+            date_end = self.planned_date
+        else:
+            date_end = Date.today()
         search_context = {
             'locations': [self.from_location.id],
             'stock_date_end': date_end,
