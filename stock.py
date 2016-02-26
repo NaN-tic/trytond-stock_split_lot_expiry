@@ -82,31 +82,29 @@ class Move:
         if not lots_and_qty:
             return [self]
 
-        state = self.state
-        self.write([self], {
-                'state': 'draft',
-                })
-
         remainder = self.internal_quantity
         current_lot, current_lot_qty = lots_and_qty.pop(0)
-        if current_lot_qty >= remainder:
+        if (current_lot_qty - remainder) >= -self.product.default_uom.rounding:
+            # current_lot_qty >= remainder
             self.write([self], {
                     'lot': current_lot.id,
                     'quantity': Uom.compute_qty(self.product.default_uom,
                         remainder, self.uom),
-                    'state': state,
                     })
             moves = [self]
-        else:
+        elif current_lot_qty > self.product.default_uom.rounding:
+            state = self.state
             self.write([self], {
                     'lot': current_lot.id,
                     'quantity': Uom.compute_qty(self.product.default_uom,
                         current_lot_qty, self.uom),
+                    'state': 'draft',
                     })
             remainder -= current_lot_qty
 
             moves = [self]
-            while remainder > 0.0 and lots_and_qty:
+            while (remainder > self.product.default_uom.rounding
+                    and lots_and_qty):
                 current_lot, current_lot_qty = lots_and_qty.pop(0)
                 quantity = min(current_lot_qty, remainder)
                 moves.extend(self.copy([self], {
@@ -115,7 +113,7 @@ class Move:
                                 self.product.default_uom, quantity, self.uom),
                             }))
                 remainder -= quantity
-            if remainder > 0.0:
+            if remainder > self.product.default_uom.rounding:
                 moves.extend(self.copy([self], {
                             'lot': None,
                             'quantity': Uom.compute_qty(
@@ -125,6 +123,8 @@ class Move:
             self.write(moves, {
                     'state': state,
                     })
+        else:
+            moves = [self]
         return moves
 
 
