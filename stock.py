@@ -92,7 +92,7 @@ class Move:
                         remainder, self.uom),
                     })
             moves = [self]
-        elif current_lot_qty > self.product.default_uom.rounding:
+        elif current_lot_qty >= self.product.default_uom.rounding:
             state = self.state
             self.write([self], {
                     'lot': current_lot.id,
