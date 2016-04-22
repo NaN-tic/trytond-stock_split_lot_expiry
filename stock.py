@@ -43,25 +43,28 @@ class Move:
         for move in moves:
             move._split_by_lot_expiry()
 
-    def _split_by_lot_expiry(self):
+    def _split_by_lot_expiry(self, assign=False):
         pool = Pool()
         Date = pool.get('ir.date')
         Lot = pool.get('stock.lot')
         Uom = pool.get('product.uom')
+
+        if self.state != 'draft':
+            return
 
         if not self.allow_split_lot_expiry:
             self.raise_user_error('invalid_split_by_lot_expiry',
                 (self.rec_name,))
 
         if self.effective_date:
-            date_end = self.effective_date
+            shipment_date = self.effective_date
         elif self.planned_date and self.planned_date >= Date.today():
-            date_end = self.planned_date
+            shipment_date = self.planned_date
         else:
-            date_end = Date.today()
+            shipment_date = Date.today()
         search_context = {
             'locations': [self.from_location.id],
-            'stock_date_end': date_end,
+            'stock_date_end': Date.today(),
             'stock_assign': True,
             'forecast': False,
             }
@@ -69,7 +72,7 @@ class Move:
         with Transaction().set_context(search_context):
             lots = Lot.search([
                     ('product', '=', self.product.id),
-                    ('expiry_date', '>', date_end),
+                    ('expiry_date', '>', shipment_date),
                     ('quantity', '>', 0.0),
                     ],
                 order=[
@@ -84,6 +87,7 @@ class Move:
 
         remainder = self.internal_quantity
         current_lot, current_lot_qty = lots_and_qty.pop(0)
+        success = True
         if (current_lot_qty - remainder) >= -self.product.default_uom.rounding:
             # current_lot_qty >= remainder
             self.write([self], {
@@ -91,41 +95,39 @@ class Move:
                     'quantity': Uom.compute_qty(self.product.default_uom,
                         remainder, self.uom),
                     })
-            moves = [self]
+            if assign:
+                self.assign_try([self], grouping=('product', 'lot'))
         elif current_lot_qty >= self.product.default_uom.rounding:
-            state = self.state
             self.write([self], {
                     'lot': current_lot.id,
                     'quantity': Uom.compute_qty(self.product.default_uom,
                         current_lot_qty, self.uom),
-                    'state': 'draft',
                     })
             remainder -= current_lot_qty
 
-            moves = [self]
+            to_assign = [self]
             while (remainder > self.product.default_uom.rounding
                     and lots_and_qty):
                 current_lot, current_lot_qty = lots_and_qty.pop(0)
                 quantity = min(current_lot_qty, remainder)
-                moves.extend(self.copy([self], {
+                to_assign.extend(self.copy([self], {
                             'lot': current_lot.id,
                             'quantity': Uom.compute_qty(
                                 self.product.default_uom, quantity, self.uom),
                             }))
                 remainder -= quantity
             if remainder > self.product.default_uom.rounding:
-                moves.extend(self.copy([self], {
-                            'lot': None,
-                            'quantity': Uom.compute_qty(
-                                self.product.default_uom, remainder, self.uom),
-                            }))
-
-            self.write(moves, {
-                    'state': state,
-                    })
+                self.copy([self], {
+                        'lot': None,
+                        'quantity': Uom.compute_qty(
+                            self.product.default_uom, remainder, self.uom),
+                        })
+                success = False
+            if assign:
+                self.assign_try(to_assign, grouping=('product', 'lot'))
         else:
-            moves = [self]
-        return moves
+            success = False
+        return success
 
 
 class ShipmentOut:
@@ -141,5 +143,7 @@ class ShipmentOut:
                     or move.product.lot_is_required(move.from_location,
                         move.to_location))
                 if move.allow_split_lot_expiry and lot_required:
-                    move._split_by_lot_expiry()
+                    # Moves must to be assigned here to avoid select the same
+                    # lot twice
+                    move._split_by_lot_expiry(assign=True)
         return super(ShipmentOut, cls).assign_try(shipments)
