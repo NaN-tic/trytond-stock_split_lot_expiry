@@ -1,5 +1,7 @@
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
+from datetime import date
+
 from trytond.model import ModelView, fields
 from trytond.pyson import Eval, Not
 from trytond.pool import Pool, PoolMeta
@@ -80,52 +82,48 @@ class Move:
             for lot in lots:
                 lots_and_qty.append((lot, lot.quantity))
 
-        if not lots_and_qty:
-            return [self]
+        if lots_and_qty:
 
-        remainder = self.internal_quantity
-        current_lot, current_lot_qty = lots_and_qty.pop(0)
-        success = True
-        if (current_lot_qty - remainder) >= -self.product.default_uom.rounding:
-            # current_lot_qty >= remainder
-            self.write([self], {
-                    'lot': current_lot.id,
-                    'quantity': Uom.compute_qty(self.product.default_uom,
-                        remainder, self.uom),
-                    })
-            if assign:
-                self.assign_try([self], grouping=('product', 'lot'))
-        elif current_lot_qty >= self.product.default_uom.rounding:
-            self.write([self], {
-                    'lot': current_lot.id,
-                    'quantity': Uom.compute_qty(self.product.default_uom,
-                        current_lot_qty, self.uom),
-                    })
-            remainder -= current_lot_qty
-
-            to_assign = [self]
-            while (remainder > self.product.default_uom.rounding
-                    and lots_and_qty):
-                current_lot, current_lot_qty = lots_and_qty.pop(0)
-                quantity = min(current_lot_qty, remainder)
-                to_assign.extend(self.copy([self], {
-                            'lot': current_lot.id,
-                            'quantity': Uom.compute_qty(
-                                self.product.default_uom, quantity, self.uom),
-                            }))
-                remainder -= quantity
-            if remainder > self.product.default_uom.rounding:
-                self.copy([self], {
-                        'lot': None,
-                        'quantity': Uom.compute_qty(
-                            self.product.default_uom, remainder, self.uom),
+            remainder = self.internal_quantity
+            current_lot, current_lot_qty = lots_and_qty.pop(0)
+            if ((current_lot_qty - remainder) >=
+                    -self.product.default_uom.rounding):
+                # current_lot_qty >= remainder
+                self.write([self], {
+                        'lot': current_lot.id,
+                        'quantity': Uom.compute_qty(self.product.default_uom,
+                            remainder, self.uom),
                         })
-                success = False
-            if assign:
-                self.assign_try(to_assign, grouping=('product', 'lot'))
-        else:
-            success = False
-        return success
+                if assign:
+                    self.assign_try([self], grouping=('product', 'lot'))
+            elif current_lot_qty >= self.product.default_uom.rounding:
+                self.write([self], {
+                        'lot': current_lot.id,
+                        'quantity': Uom.compute_qty(self.product.default_uom,
+                            current_lot_qty, self.uom),
+                        })
+                remainder -= current_lot_qty
+
+                to_assign = [self]
+                while (remainder > self.product.default_uom.rounding
+                        and lots_and_qty):
+                    current_lot, current_lot_qty = lots_and_qty.pop(0)
+                    quantity = min(current_lot_qty, remainder)
+                    to_assign.extend(self.copy([self], {
+                                'lot': current_lot.id,
+                                'quantity': Uom.compute_qty(
+                                    self.product.default_uom,
+                                    quantity, self.uom),
+                                }))
+                    remainder -= quantity
+                if remainder > self.product.default_uom.rounding:
+                    self.copy([self], {
+                            'lot': None,
+                            'quantity': Uom.compute_qty(
+                                self.product.default_uom, remainder, self.uom),
+                            })
+                if assign:
+                    self.assign_try(to_assign, grouping=('product', 'lot'))
 
 
 class ShipmentOut:
