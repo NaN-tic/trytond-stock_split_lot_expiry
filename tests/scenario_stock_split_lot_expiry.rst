@@ -12,29 +12,20 @@ Imports::
     >>> from dateutil.relativedelta import relativedelta
     >>> from decimal import Decimal
     >>> from proteus import config, Model, Wizard
+    >>> from trytond.tests.tools import activate_modules
     >>> from trytond.modules.company.tests.tools import create_company, \
     ...     get_company
     >>> today = datetime.date.today()
 
-Create database::
-
-    >>> config = config.set_trytond()
-    >>> config.pool.test = True
-
 Install stock_split_lot_expiry::
 
-    >>> Module = Model.get('ir.module')
-    >>> modules = Module.find([
-    ...         ('name', '=', 'stock_split_lot_expiry'),
-    ...         ])
-    >>> Module.install([x.id for x in modules], config.context)
-    >>> Wizard('ir.module.install_upgrade').execute('upgrade')
+    >>> config = activate_modules('stock_split_lot_expiry')
 
 Create company::
 
     >>> _ = create_company()
     >>> company = get_company()
-    >>> currency = company.currency                             
+    >>> currency = company.currency
 
 Create customer::
 
@@ -80,10 +71,8 @@ Create four lots with different expiry dates (the first one is expired)::
     >>> Lot = Model.get('stock.lot')
     >>> lots = []
     >>> for i in range(1, 5):
-    ...     lot = Lot(number='%05i' % i,
-    ...         product=product,
-    ...         expiry_date=today + relativedelta(days=((i - 1) * 10)),
-    ...         )
+    ...     lot = Lot(number='%05i' % i, product=product)
+    ...     lot.expiry_date = today + relativedelta(days=((i - 1) * 10))
     ...     lot.save()
     ...     lots.append(lot)
     >>> not any(l.expired for l in lots[1:])

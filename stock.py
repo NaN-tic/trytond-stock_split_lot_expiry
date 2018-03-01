@@ -1,17 +1,15 @@
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
-from datetime import date
-
 from trytond.model import ModelView, fields
 from trytond.pyson import Eval, Not
 from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
 
 __all__ = ['Move', 'ShipmentOut']
-__metaclass__ = PoolMeta
 
 
 class Move:
+    __metaclass__ = PoolMeta
     __name__ = 'stock.move'
 
     allow_split_lot_expiry = fields.Function(fields.Boolean('Allow Split'),
@@ -127,6 +125,7 @@ class Move:
 
 
 class ShipmentOut:
+    __metaclass__ = PoolMeta
     __name__ = 'stock.shipment.out'
 
     @classmethod
