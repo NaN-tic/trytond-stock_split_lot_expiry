@@ -40,90 +40,116 @@ class Move:
     @classmethod
     @ModelView.button
     def split_by_lot_expiry(cls, moves):
-        for move in moves:
-            move._split_by_lot_expiry()
+        cls._split_by_lot_expiry(moves)
 
-    def _split_by_lot_expiry(self, assign=False):
+    @classmethod
+    def _split_by_lot_expiry(cls, moves, assign=False):
         pool = Pool()
         Date = pool.get('ir.date')
         Lot = pool.get('stock.lot')
         Uom = pool.get('product.uom')
 
-        if self.state != 'draft':
+        split_moves = [x for x in moves if x.state == 'draft']
+        if not split_moves:
             return
 
-        if not self.allow_split_lot_expiry:
-            self.raise_user_error('invalid_split_by_lot_expiry',
-                (self.rec_name,))
+        moves_grouped = {}
+        for move in split_moves:
+            if not move.allow_split_lot_expiry:
+                cls.raise_user_error('invalid_split_by_lot_expiry',
+                    (move.rec_name,))
 
-        if self.effective_date:
-            shipment_date = self.effective_date
-        elif self.planned_date and self.planned_date >= Date.today():
-            shipment_date = self.planned_date
-        else:
-            shipment_date = Date.today()
-        search_context = {
-            'locations': [self.from_location.id],
-            'stock_date_end': Date.today(),
-            'stock_assign': True,
-            'forecast': False,
-            }
-        lots_and_qty = []
-        with Transaction().set_context(search_context):
-            lots = Lot.search([
-                    ('product', '=', self.product.id),
-                    ('expiry_date', '>', shipment_date),
-                    ('quantity', '>', 0.0),
-                    ],
-                order=[
-                    ('expiry_date', 'ASC'),
-                    ('number', 'ASC'),
-                    ])
-            for lot in lots:
-                lots_and_qty.append((lot, lot.quantity))
+            if move.effective_date:
+                shipment_date = move.effective_date
+            elif move.planned_date and move.planned_date >= Date.today():
+                shipment_date = move.planned_date
+            else:
+                shipment_date = Date.today()
+            key = (move.from_location.id, shipment_date)
+            if key not in moves_grouped:
+                moves_grouped[key] = []
 
-        if lots_and_qty:
+            moves_grouped[key].append(move)
 
-            remainder = self.internal_quantity
-            current_lot, current_lot_qty = lots_and_qty.pop(0)
-            if ((current_lot_qty - remainder) >=
-                    -self.product.default_uom.rounding):
-                # current_lot_qty >= remainder
-                self.write([self], {
-                        'lot': current_lot.id,
-                        'quantity': Uom.compute_qty(self.product.default_uom,
-                            remainder, self.uom),
-                        })
-                if assign:
-                    self.assign_try([self], grouping=('product', 'lot'))
-            elif current_lot_qty >= self.product.default_uom.rounding:
-                self.write([self], {
-                        'lot': current_lot.id,
-                        'quantity': Uom.compute_qty(self.product.default_uom,
-                            current_lot_qty, self.uom),
-                        })
-                remainder -= current_lot_qty
+        if cls.lock_stock_move():
+            Transaction().database.lock(Transaction().connection, cls._table)
 
-                to_assign = [self]
-                while (remainder > self.product.default_uom.rounding
-                        and lots_and_qty):
-                    current_lot, current_lot_qty = lots_and_qty.pop(0)
-                    quantity = min(current_lot_qty, remainder)
-                    to_assign.extend(self.copy([self], {
-                                'lot': current_lot.id,
+        for key, moves in moves_grouped.items():
+            moves = cls.browse(moves)
+            location, shipment_date = key
+            search_context = {
+                'locations': [location],
+                'stock_date_end': Date.today(),
+                'stock_assign': True,
+                'forecast': False,
+                }
+
+            to_assign = []
+            to_write = []
+
+            lots_and_qty = {}
+            with Transaction().set_context(search_context):
+                products = set(x.product.id for x in moves)
+                lots = Lot.search([
+                        ('product', 'in', list(products)),
+                        ('expiry_date', '>', shipment_date),
+                        ('quantity', '>', 0.0),
+                        ],
+                    order=[
+                        ('product', 'ASC'),
+                        ('expiry_date', 'ASC'),
+                        ('number', 'ASC'),
+                        ])
+                for lot in lots:
+                    if lot.product not in lots_and_qty:
+                        lots_and_qty[lot.product] = []
+                    lots_and_qty[lot.product].append((lot, lot.quantity))
+
+            for move in moves:
+                if move.product not in lots_and_qty:
+                    continue
+                remainder = move.internal_quantity
+                current_lot, current_lot_qty = \
+                    lots_and_qty[move.product].pop(0)
+                if ((current_lot_qty - remainder) >=
+                        -move.product.default_uom.rounding):
+                    # current_lot_qty >= remainder
+                    move.lot = current_lot.id
+                    move.quantity = Uom.compute_qty(move.product.default_uom,
+                        remainder, move.uom)
+                    to_write.append(move)
+                    if assign:
+                        to_assign.append(move)
+                elif current_lot_qty >= move.product.default_uom.rounding:
+                    move.lot = current_lot.id
+                    move.quantity = Uom.compute_qty(move.product.default_uom,
+                        current_lot_qty, move.uom)
+                    remainder -= current_lot_qty
+                    to_assign.append(move)
+                    to_write.append(move)
+                    while (remainder > move.product.default_uom.rounding
+                            and lots_and_qty[move.product]):
+                        current_lot, current_lot_qty = \
+                            lots_and_qty[move.product].pop(0)
+                        quantity = min(current_lot_qty, remainder)
+                        to_assign.extend(cls.copy([move], {
+                                    'lot': current_lot.id,
+                                    'quantity': Uom.compute_qty(
+                                        move.product.default_uom,
+                                        quantity, move.uom),
+                                    }))
+                        remainder -= quantity
+                    if remainder > move.product.default_uom.rounding:
+                        cls.copy([move], {
+                                'lot': None,
                                 'quantity': Uom.compute_qty(
-                                    self.product.default_uom,
-                                    quantity, self.uom),
-                                }))
-                    remainder -= quantity
-                if remainder > self.product.default_uom.rounding:
-                    self.copy([self], {
-                            'lot': None,
-                            'quantity': Uom.compute_qty(
-                                self.product.default_uom, remainder, self.uom),
-                            })
-                if assign:
-                    self.assign_try(to_assign, grouping=('product', 'lot'))
+                                    move.product.default_uom, remainder,
+                                    move.uom),
+                                })
+            if to_write:
+                cls.save(to_write)
+            if assign:
+                cls.assign_try(to_assign, grouping=('product', 'lot'))
 
 
 class ShipmentOut:
@@ -132,7 +158,9 @@ class ShipmentOut:
     @classmethod
     @ModelView.button
     def assign_try(cls, shipments):
+        Move = Pool().get('stock.move')
         for shipment in shipments:
+            to_split = []
             for move in shipment.inventory_moves:
                 lot_required = ('customer'
                         in [t.code for t in move.product.lot_required]
@@ -141,5 +169,7 @@ class ShipmentOut:
                 if move.allow_split_lot_expiry and lot_required:
                     # Moves must to be assigned here to avoid select the same
                     # lot twice
-                    move._split_by_lot_expiry(assign=True)
+                    to_split.append(move)
+
+            Move._split_by_lot_expiry(to_split, assign=True)
         return super(ShipmentOut, cls).assign_try(shipments)
