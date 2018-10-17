@@ -1,7 +1,5 @@
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
-from datetime import date
-
 from trytond.model import ModelView, fields
 from trytond.pyson import Eval, Not
 from trytond.pool import Pool, PoolMeta
@@ -81,6 +79,20 @@ class Move:
                     ])
             for lot in lots:
                 lots_and_qty.append((lot, lot.quantity))
+
+        if hasattr(self, 'production_input'):
+            for production_input in self.production_input.inputs:
+                if (production_input.product == self.product
+                        and production_input.state == 'draft'
+                        and production_input.lot):
+                    new_lots_and_qty = []
+                    for lot, quantity in lots_and_qty:
+                        if lot == production_input.lot:
+                            quantity -= production_input.quantity
+                            if quantity <= 0:
+                                continue
+                        new_lots_and_qty.append((lot, quantity))
+                    lots_and_qty = new_lots_and_qty
 
         if not lots_and_qty:
             return [self]
