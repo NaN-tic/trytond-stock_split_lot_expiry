@@ -106,7 +106,7 @@ class Move:
             for move in moves:
                 if move.product not in lots_and_qty:
                     continue
-                if hasattr(move, 'production_input'):
+                if getattr(move, 'production_input', False):
                     for production_input in move.production_input.inputs:
                         if (production_input.product == move.product
                                 and production_input.state == 'draft'
