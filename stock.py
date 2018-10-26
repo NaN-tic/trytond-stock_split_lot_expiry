@@ -80,7 +80,7 @@ class Move:
             for lot in lots:
                 lots_and_qty.append((lot, lot.quantity))
 
-        if hasattr(self, 'production_input'):
+        if getattr(self, 'production_input', False):
             for production_input in self.production_input.inputs:
                 if (production_input.product == self.product
                         and production_input.state == 'draft'
