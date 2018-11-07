@@ -90,12 +90,12 @@ class Move:
                 products = set(x.product.id for x in moves)
                 lots = Lot.search([
                         ('product', 'in', list(products)),
-                        ('expiry_date', '>', shipment_date),
+                        ('expiration_date', '>', shipment_date),
                         ('quantity', '>', 0.0),
                         ],
                     order=[
                         ('product', 'ASC'),
-                        ('expiry_date', 'ASC'),
+                        ('expiration_date', 'ASC'),
                         ('number', 'ASC'),
                         ])
                 for lot in lots:

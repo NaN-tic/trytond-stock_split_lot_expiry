@@ -39,8 +39,6 @@ Get stock locations and set Allow Expired to Storage Location::
     >>> customer_loc, = Location.find([('code', '=', 'CUS')])
     >>> output_loc, = Location.find([('code', '=', 'OUT')])
     >>> storage_loc, = Location.find([('code', '=', 'STO')])
-    >>> storage_loc.allow_expired = True
-    >>> storage_loc.save()
 
 Get Stock Lot Type::
 
@@ -72,13 +70,10 @@ Create four lots with different expiry dates (the first one is expired)::
     >>> lots = []
     >>> for i in range(1, 5):
     ...     lot = Lot(number='%05i' % i, product=product)
-    ...     lot.expiry_date = today + relativedelta(days=((i - 1) * 10))
+    ...     lot.expiration_date = today + relativedelta(days=((i - 1) * 10))
     ...     lot.save()
     ...     lots.append(lot)
-    >>> not any(l.expired for l in lots[1:])
-    True
-    >>> lots[0].expired
-    True
+
 
 Create an Inventory to add 4 units of each lot in Storage Location::
 
@@ -158,6 +153,6 @@ Check that lots are used priorizing what have the nearest Expiry Date, without
 using the expired lots::
 
     >>> unused = config.set_context({'locations': [storage.id]})
-    >>> lots = Lot.find([], order=[('expiry_date', 'ASC')])
-    >>> [(l.number, l.expired, l.quantity) for l in lots]
-    [(u'00001', True, 4.0), (u'00002', False, 0.0), (u'00003', False, 0.0), (u'00004', False, 0.0)]
+    >>> lots = Lot.find([], order=[('expiration_date', 'ASC')])
+    >>> [(l.number, l.quantity) for l in lots]
+    [(u'00001', 4.0), (u'00002', 0.0), (u'00003', 0.0), (u'00004', 0.0)]
