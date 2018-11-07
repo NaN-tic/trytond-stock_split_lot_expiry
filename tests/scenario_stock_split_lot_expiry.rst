@@ -93,7 +93,7 @@ Create an Inventory to add 4 units of each lot in Storage Location::
     >>> inventory.save()
     >>> Inventory.confirm([inventory.id], config.context)
     >>> inventory.state
-    u'done'
+    'done'
 
 Create Shipment Out of 15 units of Product and set to waiting::
 
@@ -155,4 +155,4 @@ using the expired lots::
     >>> unused = config.set_context({'locations': [storage.id]})
     >>> lots = Lot.find([], order=[('expiration_date', 'ASC')])
     >>> [(l.number, l.quantity) for l in lots]
-    [(u'00001', 4.0), (u'00002', 0.0), (u'00003', 0.0), (u'00004', 0.0)]
+    [('00001', 4.0), ('00002', 0.0), ('00003', 0.0), ('00004', 0.0)]
