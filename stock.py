@@ -119,8 +119,11 @@ class Move(metaclass=PoolMeta):
                                 new_lots_and_qty.append((lot, quantity))
                             lots_and_qty[move.product] = new_lots_and_qty
                 remainder = move.internal_quantity
-                current_lot, current_lot_qty = \
-                    lots_and_qty[move.product].pop(0)
+                lots_and_qty_product = lots_and_qty[move.product]
+                # can't split a move by lot-qty that is empty list
+                if not lots_and_qty_product:
+                    continue
+                current_lot, current_lot_qty = lots_and_qty_product.pop(0)
                 if ((current_lot_qty - remainder) >=
                         -move.product.default_uom.rounding):
                     # current_lot_qty >= remainder
