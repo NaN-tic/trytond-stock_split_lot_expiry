@@ -4,6 +4,8 @@ from trytond.model import ModelView, fields
 from trytond.pyson import Eval, Not
 from trytond.pool import Pool, PoolMeta
 from trytond.transaction import Transaction
+from trytond.i18n import gettext
+from trytond.exceptions import UserError
 
 __all__ = ['Move', 'ShipmentOut']
 
@@ -17,11 +19,6 @@ class Move(metaclass=PoolMeta):
     @classmethod
     def __setup__(cls):
         super(Move, cls).__setup__()
-        cls._error_messages.update({
-            'invalid_split_by_lot_expiry': ('You are trying to split the '
-                'Stock Move "%s" by Expiry Dates but it is in a invalid state '
-                '(Assigned, Done or Cancelled) or it already has a Lot.'),
-            })
         cls._buttons.update({
                 'split_by_lot_expiry': {
                     'invisible': Not(Eval('allow_split_lot_expiry', False)),
@@ -53,8 +50,9 @@ class Move(metaclass=PoolMeta):
         moves_grouped = {}
         for move in split_moves:
             if not move.allow_split_lot_expiry:
-                cls.raise_user_error('invalid_split_by_lot_expiry',
-                    (move.rec_name,))
+                raise UserError(gettext(
+                    'stock_split_lot_expiry.invalid_split_by_lot_expiry',
+                    move=move.rec_name))
 
             if move.effective_date:
                 shipment_date = move.effective_date
