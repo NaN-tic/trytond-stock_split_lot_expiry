@@ -40,11 +40,6 @@ Get stock locations and set Allow Expired to Storage Location::
     >>> output_loc, = Location.find([('code', '=', 'OUT')])
     >>> storage_loc, = Location.find([('code', '=', 'STO')])
 
-Get Stock Lot Type::
-
-    >>> LotType = Model.get('stock.lot.type')
-    >>> lot_types = LotType.find()
-
 Create products::
 
     >>> ProductUom = Model.get('product.uom')
@@ -57,12 +52,10 @@ Create products::
     >>> template.default_uom = unit
     >>> template.type = 'goods'
     >>> template.list_price = Decimal('20')
-    >>> template.cost_price = Decimal('8')
-    >>> for lot_type in lot_types:
-    ...     template.lot_required.append(lot_type)
+    >>> template.lot_required = ['supplier', 'customer', 'lost_found',
+    ...     'storage', 'production']
     >>> template.save()
-    >>> product.template = template
-    >>> product.save()
+    >>> product, = template.products
 
 Create four lots with different expiry dates (the first one is expired)::
 
