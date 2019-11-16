@@ -173,8 +173,7 @@ class ShipmentOut(metaclass=PoolMeta):
         for shipment in shipments:
             to_split = []
             for move in shipment.inventory_moves:
-                lot_required = ('customer'
-                        in [t.code for t in move.product.lot_required]
+                lot_required = ('customer' in move.product.lot_required
                     or move.product.lot_is_required(move.from_location,
                         move.to_location))
                 if move.allow_split_lot_expiry and lot_required:
