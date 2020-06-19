@@ -67,7 +67,6 @@ Create four lots with different expiry dates (the first one is expired)::
     ...     lot.save()
     ...     lots.append(lot)
 
-
 Create an Inventory to add 4 units of each lot in Storage Location::
 
     >>> Inventory = Model.get('stock.inventory')
@@ -147,5 +146,7 @@ using the expired lots::
 
     >>> unused = config.set_context({'locations': [storage.id]})
     >>> lots = Lot.find([], order=[('expiration_date', 'ASC')])
+    >>> Move = Model.get('stock.move')
+    >>> Move.click(shipment_out.inventory_moves, 'do')
     >>> [(l.number, l.quantity) for l in lots]
     [('00001', 4.0), ('00002', 0.0), ('00003', 0.0), ('00004', 0.0)]
