@@ -66,7 +66,8 @@ class Move(metaclass=PoolMeta):
 
             moves_grouped[key].append(move)
 
-        if cls.lock_stock_move():
+        # patch lock_stock_move.diff
+        if hasattr(cls, 'lock_stock_move') and cls.lock_stock_move():
             Transaction().database.lock(Transaction().connection, cls._table)
 
         for key, moves in moves_grouped.items():
