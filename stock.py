@@ -26,7 +26,7 @@ class Move(metaclass=PoolMeta):
                 })
 
     def get_allow_split_lot_expiry(self, name):
-        return (self.state not in ('cancel', 'assigned', 'done') and
+        return (self.state not in ('cancelled', 'assigned', 'done') and
             not self.lot
             and (not self.shipment
                 or self.shipment.__name__ != 'stock.shipment.in'))
