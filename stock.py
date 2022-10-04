@@ -42,6 +42,7 @@ class Move(metaclass=PoolMeta):
         Date = pool.get('ir.date')
         Lot = pool.get('stock.lot')
         Uom = pool.get('product.uom')
+        Location= pool.get('stock.location')
 
         split_moves = [x for x in moves if x.state == 'draft']
         if not split_moves:
@@ -66,9 +67,19 @@ class Move(metaclass=PoolMeta):
 
             moves_grouped[key].append(move)
 
-        # patch lock_stock_move.diff
-        if hasattr(cls, 'lock_stock_move') and cls.lock_stock_move():
-            Transaction().database.lock(Transaction().connection, cls._table)
+        locations = Location.search([
+            ('parent', 'child_of',
+                [x.from_location.id for x in moves]),
+        ])
+
+        location_ids = [l.id for l in locations]
+        product_ids = list(set((m.product.id for m in moves)))
+        companies = {m.company for m in moves}
+        stock_date_end = Date.today()
+
+        cls._assign_try_lock(
+            product_ids, location_ids, [c.id for c in companies],
+            stock_date_end, ('product',))
 
         for key, moves in moves_grouped.items():
             moves = cls.browse(moves)
