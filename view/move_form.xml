@@ -3,9 +3,9 @@
      copyright notices and license terms. -->
 <data>
     <xpath expr="/form/field[@name='state']" position="after">
-        <group id="split_by_lot_expiry" colspan="1">
-            <field name="allow_split_lot_expiry" invisible="1"/>
-            <button name="split_by_lot_expiry" string="Split by Lot Expiry"/>
-        </group>
+        <field name="allow_split_lot_expiry" invisible="1"/>
+    </xpath>
+    <xpath expr="/form/group[@id='buttons']/button[@name='do']" position="after">
+        <button name="split_by_lot_expiry"/>
     </xpath>
 </data>

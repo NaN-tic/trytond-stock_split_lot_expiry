@@ -15,6 +15,6 @@ msgstr ""
 " lotes, pero no se puede hacer si su estado es Asignado, Realizado o "
 "Cancelado, o si ya tiene un lote asignado."
 
-msgctxt "view:stock.move:"
+msgctxt "model:ir.model.button,string:move_split_by_lot_expiry_button"
 msgid "Split by Lot Expiry"
 msgstr "Dividir por caducidad de lotes"
