@@ -15,6 +15,6 @@ msgstr ""
 "lots, però no es pot fer si el seu estat és Assignat, Realitzat o Cancelat, "
 "o ja té un lot assignat."
 
-msgctxt "view:stock.move:"
+msgctxt "model:ir.model.button,string:move_split_by_lot_expiry_button"
 msgid "Split by Lot Expiry"
 msgstr "Divideix per caducitat dels lots"
