@@ -99,7 +99,7 @@ Create Shipment Out of 15 units of Product and set to waiting::
     >>> move = StockMove()
     >>> shipment_out.outgoing_moves.append(move)
     >>> move.product = product
-    >>> move.uom = unit
+    >>> move.unit = unit
     >>> move.quantity = 15
     >>> move.from_location = output_loc
     >>> move.to_location = customer_loc

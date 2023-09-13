@@ -139,14 +139,14 @@ class Move(metaclass=PoolMeta):
                     # current_lot_qty >= remainder
                     move.lot = current_lot.id
                     move.quantity = Uom.compute_qty(move.product.default_uom,
-                        remainder, move.uom)
+                        remainder, move.unit)
                     to_write.append(move)
                     if assign:
                         to_assign.append(move)
                 elif current_lot_qty >= move.product.default_uom.rounding:
                     move.lot = current_lot.id
                     move.quantity = Uom.compute_qty(move.product.default_uom,
-                        current_lot_qty, move.uom)
+                        current_lot_qty, move.unit)
                     remainder -= current_lot_qty
                     to_assign.append(move)
                     to_write.append(move)
@@ -159,7 +159,7 @@ class Move(metaclass=PoolMeta):
                                     'lot': current_lot.id,
                                     'quantity': Uom.compute_qty(
                                         move.product.default_uom,
-                                        quantity, move.uom),
+                                        quantity, move.unit),
                                     }))
                         remainder -= quantity
                     if remainder > move.product.default_uom.rounding:
@@ -167,7 +167,7 @@ class Move(metaclass=PoolMeta):
                                 'lot': None,
                                 'quantity': Uom.compute_qty(
                                     move.product.default_uom, remainder,
-                                    move.uom),
+                                    move.unit),
                                 })
             if to_write:
                 cls.save(to_write)
