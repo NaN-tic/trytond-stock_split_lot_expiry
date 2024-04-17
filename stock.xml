@@ -13,7 +13,7 @@
         <record model="ir.model.button" id="move_split_by_lot_expiry_button">
             <field name="name">split_by_lot_expiry</field>
             <field name="string">Split by Lot Expiry</field>
-            <field name="model" search="[('model', '=', 'stock.move')]"/>
+            <field name="model">stock.move</field>
         </record>
         <record model="ir.model.button-res.group" id="move_split_by_lot_expiry_button_group_stock">
             <field name="button" ref="move_split_by_lot_expiry_button"/>
