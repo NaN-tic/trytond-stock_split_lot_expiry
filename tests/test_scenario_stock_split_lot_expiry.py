@@ -121,7 +121,8 @@ class Test(unittest.TestCase):
 
         # Execute the Split Moves by Expiry Date button and check all inventory moves are
         # # assigned and sum the 11 units of shipment line
-        without_lot.click('cancel')
+        StockMove.write([without_lot.id], {'state': 'draft'}, config.context)
+        without_lot = StockMove(without_lot.id)
         StockMove.delete([without_lot])
         shipment_out.reload()
         self.assertEqual(len(shipment_out.inventory_moves), 3)
@@ -134,8 +135,9 @@ class Test(unittest.TestCase):
         # using the expired lots
         config.set_context({'locations': [storage.id]})
         lots = Lot.find([], order=[('expiration_date', 'ASC')])
-        Move = Model.get('stock.move')
-        Move.click(shipment_out.inventory_moves, 'do')
+        shipment_out.click('pick')
+        shipment_out.click('pack')
+        shipment_out.click('do')
         self.assertEqual([(l.number, l.quantity) for l in lots],
                          [('00001', 4.0), ('00002', 0.0), ('00003', 0.0),
                           ('00004', 0.0)])
