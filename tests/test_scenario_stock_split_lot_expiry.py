@@ -121,7 +121,8 @@ class Test(unittest.TestCase):
 
         # Execute the Split Moves by Expiry Date button and check all inventory moves are
         # # assigned and sum the 11 units of shipment line
-        StockMove.write([without_lot.id], {'state': 'draft'}, config.context)
+        StockMove.write([without_lot.id], {'state': 'draft'}, {
+                **config.context, '_check_access': False})
         without_lot = StockMove(without_lot.id)
         StockMove.delete([without_lot])
         shipment_out.reload()
